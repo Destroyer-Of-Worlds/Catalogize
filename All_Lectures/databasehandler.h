@@ -13,6 +13,7 @@ private:
 
 public:
     DataBaseHandler();
+    ~DataBaseHandler();
     void        ConnectDataBase(QString name);      //подключение базы данных
 
     bool        getErrorFlag();

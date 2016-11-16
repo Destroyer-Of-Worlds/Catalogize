@@ -3,13 +3,15 @@
 
 #include <QAbstractItemModel>
 #include <databasehandler.h>
+#include <QModelIndex>
+#include <QVariant>
 
 
 enum h_type{ROOT, TERM = 1, COURSE, THEME, IMAGE};
 
 struct IData
 {
-    QString path;
+    QString name;
     QString comment;
     QString tags;
 };
@@ -18,7 +20,7 @@ struct DataWrapper
 {
     quint16 id;
     h_type type;
-    IData data;
+    IData *data;
     int number;
     DataWrapper *parent;
     QList<DataWrapper *> children;
@@ -31,7 +33,7 @@ class LectureModel : public QAbstractItemModel
 
 public:
     explicit LectureModel(QObject *parent = 0);
-
+    ~LectureModel();
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 

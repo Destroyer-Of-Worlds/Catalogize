@@ -7,6 +7,11 @@ DataBaseHandler::DataBaseHandler()
     ConnectDataBase("LecturesDB");
 }
 
+DataBaseHandler::~DataBaseHandler()
+{
+    dataBase.close();
+}
+
 
 void DataBaseHandler::ConnectDataBase(QString name)
 {
