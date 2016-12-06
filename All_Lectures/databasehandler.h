@@ -11,15 +11,23 @@ private:
     QString         dbName;
     bool            errorFlag;
 
+    void        ConnectDataBase();      //подключение базы данных
+
 public:
-    DataBaseHandler();
+    DataBaseHandler(QString name);
     ~DataBaseHandler();
-    void        ConnectDataBase(QString name);      //подключение базы данных
+
 
     bool        getErrorFlag();
-    QString     getDbName();
-    int         getRowCountS_and_t();//количество строк Subjects_and_themes
 
+    //Получение имени таблицы
+    QString     getDbName();
+
+    // Возвращает количество строк таблицы,
+    // имеющих заданный parentId в соотвтствующем столбце
+    int         getRowCountOfChild(int parentId, int type);
+
+    //Печать таблиц
     void        printSubjects_and_themes();
     void        printPictures_info();
 

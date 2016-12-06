@@ -1,8 +1,10 @@
 #include "lecturemodel.h"
 
-LectureModel::LectureModel(QObject *parent)
+LectureModel::LectureModel(QString dbPath, QObject *parent)
     : QAbstractItemModel(parent)
 {
+    dbName = dbPath; // dbName = append(dbPath)
+    dataBase = new DataBaseHandler(dbName);
     root = new DataWrapper;
     root->id = 0;
     root->count = 0;
@@ -35,67 +37,17 @@ LectureModel::LectureModel(QObject *parent)
                 iData->name = query.value(rec.indexOf("Term")).toString();
                 dw->data = iData;
                 dw->parent = root;
+                dw->count = dataBase->getRowCountOfChild(dw->id, dw->type);
                 root->children.append(dw);
             }
-        }
-        query.first();
-        while (query.next())
-        {
-
-            type = query.value(rec.indexOf("Type")).toInt();
-            if(type == 2)
-            {
-                dw = new DataWrapper;
-                iData = new IData;
-                dw->type = COURSE;
-                dw->id = query.value(rec.indexOf("Id_subj")).toInt();
-                dw->number = query.value(rec.indexOf("Serial_number")).toInt();
-                iData->name = query.value(rec.indexOf("Name_subj")).toString();
-                dw->data = iData;
-                id = query.value(rec.indexOf("Id_parent")).toInt();
-                foreach (DataWrapper* dw_term, root->children) {
-                    if(dw_term->id == id)
-                    {
-                        dw->parent = dw_term;
-                        dw_term->children.append(dw);
-                    }
-                }
-            }
-        }
-        query.first();
-        while (query.next())
-        {
-
-            type = query.value(rec.indexOf("Type")).toInt();
-            if(type == 3)
-            {
-                dw = new DataWrapper;
-                iData = new IData;
-                dw->type = THEME;
-                dw->id = query.value(rec.indexOf("Id_subj")).toInt();
-                dw->number = query.value(rec.indexOf("Serial_number")).toInt();
-                iData->name = query.value(rec.indexOf("Name_subj")).toString();
-                dw->data = iData;
-                id = query.value(rec.indexOf("Id_parent")).toInt();
-                foreach (DataWrapper* dw_term, root->children) {
-                    foreach (DataWrapper* dw_sub, dw_term->children) {
-                        if(dw_sub->id == id)
-                        {
-                            dw->parent = dw_sub;
-                            dw_sub->children.append(dw);
-                            int hght = 0;
-                        }
-                    }
-                }
-            }
-        }
+        }        
     }
 }
 
 LectureModel::~LectureModel()
 {
     //Need implement!!!
-    delete root;
+    //delete root;
 }
 
 QVariant LectureModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -186,7 +138,6 @@ int LectureModel::rowCount(const QModelIndex &parent) const
 
 int LectureModel::columnCount(const QModelIndex &parent) const
 {
-
     return 1;
 }
 
@@ -195,13 +146,109 @@ QVariant LectureModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if(role != Qt::DisplayRole)
+    DataWrapper* itemIndex = static_cast<DataWrapper*>(index.internalPointer());
+
+    if(role == Qt::DisplayRole)
     {
-        return QVariant();
+        switch (itemIndex->type) {
+        case TERM:
+        case COURSE:
+        case THEME:{
+            DataWrapper *item = static_cast<DataWrapper*>(index.internalPointer());
+            return (item->data->name);
+            break;}
+        default:
+            break;
+        }
+        DataWrapper *item = static_cast<DataWrapper*>(index.internalPointer());
+        return (item->data->name);
     }
-    DataWrapper *item = static_cast<DataWrapper*>(index.internalPointer());
-    return (item->data->name);
-    // FIXME: Implement me!
-    //return QVariant();
+
+    if(role == Qt::DecorationRole)
+    {
+        if(itemIndex->type == IMAGE){
+            QImage image((itemIndex->data)->name);
+            if(!image.isNull())
+            {
+                QPixmap pixmap = QPixmap::fromImage(image);
+                //QPixmap pixmap = QPixmap::load((itemIndex->data)->name);
+                return pixmap;
+            }
+        }
+    }
+    return QVariant();
+}
+
+void LectureModel::fetchMore(const QModelIndex &parent)
+{
+    DataWrapper* parentItem = static_cast<DataWrapper*>(parent.internalPointer());
+
+    if(parentItem->count == 0)
+    {
+        return;
+    }
+
+    beginInsertRows(parent,0,parentItem->count);
+    QSqlQuery query;
+    if(parentItem->type != THEME)
+    {
+        query.exec(QString("SELECT * FROM subjects_and_themes WHERE (Id_parent = %1)").arg(QString::number(parentItem->id)));
+    }
+    else
+    {
+        query.exec(QString("SELECT * FROM pictures_info WHERE (Id_parent = %1)").arg(QString::number(parentItem->id)));
+    }
+    QSqlRecord rec = query.record();
+    DataWrapper* dw;
+    IData *iData;
+    int type = 0;
+    int id = 0;
+    while (query.next())
+    {
+        dw = new DataWrapper;
+        iData = new IData;
+        dw->type = static_cast<h_type>(query.value(rec.indexOf("Type")).toInt());
+        dw->id = query.value(rec.indexOf("Id_subj")).toInt();
+        dw->number = query.value(rec.indexOf("Serial_number")).toInt();
+        if(parentItem->type != THEME)
+        {
+            iData->name = query.value(rec.indexOf("Name_subj")).toString();
+        }
+        else
+        {
+            iData->name = query.value(rec.indexOf("Image_path")).toString();
+            iData->comment = query.value(rec.indexOf("Comment")).toString();
+            iData->tags = query.value(rec.indexOf("Tags")).toString();
+        }
+        dw->data = iData;
+        dw->parent = parentItem;
+        dw->count = dataBase->getRowCountOfChild(dw->id, dw->type);
+        parentItem->children.append(dw);
+
+    }
+    endInsertRows();
+
+}
+
+bool LectureModel::hasChildren(const QModelIndex &parent) const
+{
+    if(parent.isValid())
+    {
+        const DataWrapper* parentItem = static_cast<DataWrapper*>(parent.internalPointer());
+        Q_ASSERT(parentItem != 0);
+        if(parentItem->count > 0)
+            return true;
+    }
+    return QAbstractItemModel::hasChildren(parent);
+}
+
+bool LectureModel::canFetchMore(const QModelIndex &parent) const
+{
+    if (!parent.isValid())
+    {
+            return false;
+    }
+    const DataWrapper* parentItem = static_cast<DataWrapper*>(parent.internalPointer());
+    return (parentItem->count > parentItem->children.size());
 }
 

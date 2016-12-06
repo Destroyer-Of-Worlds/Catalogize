@@ -32,7 +32,7 @@ class LectureModel : public QAbstractItemModel
     Q_OBJECT
 
 public:
-    explicit LectureModel(QObject *parent = 0);
+    explicit LectureModel(QString dbPath, QObject *parent = 0);
     ~LectureModel();
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
@@ -47,9 +47,14 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
+    bool canFetchMore(const QModelIndex &parent) const override;
+    void fetchMore(const QModelIndex &parent);
+    bool hasChildren(const QModelIndex &parent) const;
+
 private:
 
-    DataBaseHandler db;
+    QString dbName;
+    DataBaseHandler *dataBase;
     DataWrapper* root;
 
 };

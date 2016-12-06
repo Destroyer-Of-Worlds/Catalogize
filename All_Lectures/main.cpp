@@ -8,12 +8,15 @@
 #include <QtGui>
 #include "databasehandler.h"
 #include "lecturemodel.h"
+#include <QQmlComponent>
+#include <QQmlContext>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    //DataBaseHandler testhand;
-    //testhand.printSubjects_and_themes();
+    //DataBaseHandler* testhand = new DataBaseHandler("../LecturesDB");
+    //testhand->printPictures_info();
+    //qDebug() << testhand->getRowCountOfChild(1);
 
     /*QString str_insert = "INSERT INTO my_table(number, address, age) "
                          "VALUES (%1, '%2', %3);";
@@ -26,14 +29,20 @@ int main(int argc, char *argv[])
     }*/
 
 
-    /*QQmlApplicationEngine engine;
-    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));*/
 
-    LectureModel model;
+
+    LectureModel *model = new LectureModel("../LecturesDB");
+    //LectureModel model{"../LecturesDB"};
     QTreeView view;
-    view.setModel(&model);
+    view.setModel(model);
     view.setWindowTitle("Tree model");
     view.show();
 
+    /*LectureModel *ip = new LectureModel("../LecturesDB");
+    QQmlEngine engine;
+    engine.rootContext()->setContextProperty("myModel", ip);
+    QQmlComponent component(&engine, QUrl("qrc:/main.qml"));
+    //engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    component.create();*/
     return app.exec();
 }
